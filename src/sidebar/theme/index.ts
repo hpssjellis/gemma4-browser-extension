@@ -12,7 +12,6 @@ export { default as FormError } from "./form/FormError";
 /* misc */
 export { default as Tooltip, type TooltipProps } from "./misc/Tooltip";
 export { default as Message } from "./misc/Message";
-export { default as MessageContent } from "./misc/MessageContent";
 export { default as Card } from "./misc/Card";
 export { default as Spacer } from "./misc/Spacer";
 export { default as Loader } from "./misc/Loader";

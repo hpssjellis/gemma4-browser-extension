@@ -1,10 +1,15 @@
-import { Message } from "@huggingface/transformers";
 import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
-import { BackgroundMessages, BackgroundTasks } from "../../shared/types.ts";
-import { Button, InputText, MessageContent } from "../theme";
+import {
+  BackgroundMessages,
+  BackgroundTasks,
+  ChatMessage,
+  ResponseStatus,
+} from "../../shared/types.ts";
+import { Button, InputText } from "../theme";
 import cn from "../utils/classnames.ts";
+import MessageContent from "./MessageContent.tsx";
 
 interface FormParams {
   input: string;
@@ -19,10 +24,11 @@ export default function Chat() {
     reset,
   } = useForm<FormParams>({
     defaultValues: {
-      input: "",
+      input:
+        "Whats the best transport method for today based in the weather in London?",
     },
   });
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Array<ChatMessage>>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
@@ -51,7 +57,10 @@ export default function Chat() {
         type: BackgroundTasks.AGENT_GENERATE_TEXT,
         prompt: data.input,
       },
-      () => {
+      (resp) => {
+        if (resp.status === ResponseStatus.ERROR) {
+          alert(resp.error);
+        }
         setIsLoading(false);
       }
     );
@@ -63,37 +72,38 @@ export default function Chat() {
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto px-6 py-4 space-y-4"
       >
-        {messages.length === 0 ? (
+        {(messages || []).length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-sm text-chrome-text-secondary">
               Start a conversation by typing a message below
             </p>
           </div>
         ) : (
-          messages
-            .filter((message) => message.role !== "system")
-            .map((message, index) => (
-              <div
-                key={index}
-                className={cn(
-                  "max-w-[85%] rounded-md px-4 py-3",
-                  message.role === "user"
-                    ? "ml-auto bg-chrome-accent-primary text-chrome-bg-primary"
-                    : "bg-chrome-bg-secondary"
+          messages.map((message, index) => (
+            <div
+              key={index}
+              className={cn(
+                "max-w-[85%] rounded-md px-4 py-3",
+                message.role === "user"
+                  ? "ml-auto bg-chrome-accent-primary text-chrome-bg-primary"
+                  : "bg-chrome-bg-secondary"
+              )}
+            >
+              {/*<div className="mb-1 text-xs font-medium opacity-70">
+                {message.role === "user" ? "You" : message.role}
+              </div>*/}
+              <div className="text-sm">
+                {message.role === "user" ? (
+                  message.content
+                ) : (
+                  <MessageContent
+                    content={message.content}
+                    tools={message.tools}
+                  />
                 )}
-              >
-                <div className="mb-1 text-xs font-medium opacity-70">
-                  {message.role === "user" ? "You" : "Assistant"}
-                </div>
-                <div className="text-sm">
-                  {message.role === "user" ? (
-                    message.content
-                  ) : (
-                    <MessageContent content={message.content} />
-                  )}
-                </div>
               </div>
-            ))
+            </div>
+          ))
         )}
       </div>
 

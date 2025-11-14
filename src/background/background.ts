@@ -6,8 +6,6 @@ import {
 import Agent from "./agent/Agent.ts";
 import FeatureExtractor from "./utils/FeatureExtractor.ts";
 
-console.log("AgentGemma Extension: Background service worker loaded");
-
 const onModelDownloadProgress = (modelId: string, percentage: number) =>
   chrome.runtime.sendMessage({
     type: BackgroundMessages.DOWNLOAD_PROGRESS,
@@ -18,7 +16,7 @@ const onModelDownloadProgress = (modelId: string, percentage: number) =>
 const agent = new Agent();
 const featureExtractor = new FeatureExtractor();
 
-agent.onMessageUpdate((messages) =>
+agent.onChatMessageUpdate((messages) =>
   chrome.runtime.sendMessage({
     type: BackgroundMessages.MESSAGES_UPDATE,
     messages,
@@ -44,9 +42,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === BackgroundTasks.AGENT_GENERATE_TEXT) {
     agent
-      .generateText(message.prompt)
-      .then((result) => {
-        sendResponse({ status: ResponseStatus.SUCCESS, result });
+      .runAgent(message.prompt)
+      .then(() => {
+        sendResponse({ status: ResponseStatus.SUCCESS });
       })
       .catch((error) => {
         console.error("GENERATE_TEXT failed:", error);
@@ -57,12 +55,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === BackgroundTasks.AGENT_GET_MESSAGES) {
-    sendResponse({ status: ResponseStatus.SUCCESS, messages: agent.messages });
+    sendResponse({
+      status: ResponseStatus.SUCCESS,
+      messages: agent.chatMessages,
+    });
     return true;
   }
 
   if (message.type === BackgroundTasks.AGENT_CLEAR) {
-    agent.messages = [];
+    agent.clear();
     sendResponse({ status: ResponseStatus.SUCCESS });
     return true;
   }

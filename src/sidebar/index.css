@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
   /* Color palette */
@@ -26,7 +27,8 @@
   --font-size-3xl: 22px;
 
   /* Font family */
-  --font-family-sans: "Roboto", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family-sans:
+    "Roboto", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Border radius - Chrome uses subtle rounded corners */
   --radius-sm: 4px;
@@ -39,7 +41,12 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: "Roboto", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    "Roboto",
+    "Segoe UI",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

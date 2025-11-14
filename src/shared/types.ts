@@ -18,3 +18,23 @@ export enum BackgroundMessages {
 }
 
 export type Dtype = "fp32" | "fp16" | "q4" | "q4f16";
+
+export interface ChatMessageUser {
+  role: "user";
+  content: string;
+}
+
+export interface ChatMessageTool {
+  name: string;
+  functionSignature: string;
+  id: string;
+  result: string;
+}
+
+export interface ChatMessageAssistant {
+  role: "assistant";
+  content: string;
+  tools: Array<ChatMessageTool>;
+}
+
+export type ChatMessage = ChatMessageUser | ChatMessageAssistant;
