@@ -17,7 +17,7 @@ export default function SettingsHeader({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-normal text-chrome-text-primary leading-tight">
-            AgentGemma Browser Assistant
+            FunctionGemma Browser Assistant
           </h1>
           <p className="text-sm text-chrome-text-secondary mt-1">
             Powered by{" "}

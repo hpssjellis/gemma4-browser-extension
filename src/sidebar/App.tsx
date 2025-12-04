@@ -48,7 +48,7 @@ export default function App() {
       <div className="flex items-center justify-center h-full w-full flex-col gap-8 px-6">
         <div className="text-center max-w-md">
           <h1 className="text-3xl font-normal text-chrome-text-primary mb-2">
-            Welcome to AgentGemma
+            Welcome to FunctionGemma
           </h1>
           <p className="text-sm text-chrome-text-secondary mb-6">
             Download the required AI models to get started. This is a one-time

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Transformer.js AgentGemma Extension",
+  "name": "Transformer.js FunctionGemma Extension",
   "version": "0.0.1",
   "description": "Chrome extension with transformers.js ML capabilities",
   "permissions": [
