@@ -25,7 +25,6 @@ The agent can manage your browser tabs through natural language:
 The extension uses Retrieval-Augmented Generation to understand and interact with webpage content:
 
 - **ask_website**: Search and extract relevant information from the current webpage using semantic similarity. The content script extracts structured content (headings, paragraphs, lists), generates embeddings using all-MiniLM-L6-v2, and returns the most relevant sections based on your query.
-
 - **highlight_website_element**: Visually highlight specific elements on the page. The agent can direct your attention to specific content by highlighting and scrolling to relevant sections.
 
 #### History Vector Database
@@ -33,7 +32,6 @@ The extension uses Retrieval-Augmented Generation to understand and interact wit
 The extension maintains a semantic search-enabled history database:
 
 - **find_history**: Search your browsing history using natural language queries instead of exact keywords. The system stores vector embeddings for page titles, descriptions, and URLs in IndexedDB, enabling semantic search with time-based filtering and relevance scoring.
-
 - **search_history**: Traditional keyword-based history search
 - **search_bookmarks**: Search through your bookmarks
 
