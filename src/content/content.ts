@@ -15,7 +15,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === ContentTasks.HIGHLIGHT_ELEMENTS) {
-    console.log("highlighting", message.payload.id);
     highlightParagraph(message.payload.id);
     sendResponse({ success: true });
   }
