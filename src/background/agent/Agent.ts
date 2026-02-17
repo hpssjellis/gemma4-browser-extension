@@ -1,7 +1,6 @@
 import {
   AutoModelForCausalLM,
   AutoTokenizer,
-  Message,
   PreTrainedModel,
   PreTrainedTokenizer,
   TextStreamer,
@@ -17,6 +16,13 @@ import {
   executeWebMCPTool,
   webMCPToolToChatTemplateTool,
 } from "./webMcp.tsx";
+
+// Define Message type locally since it may not be exported from the main module
+type Message = {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  [key: string]: any;
+};
 
 interface Pipeline {
   tokenizer: PreTrainedTokenizer;
@@ -123,7 +129,6 @@ class Agent {
     // Generate the response
     const output: any = await model.generate({
       ...input,
-      // @ts-expect-error
       past_key_values: this.pastKeyValues,
       max_new_tokens: 1024,
       do_sample: false,

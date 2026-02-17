@@ -16,3 +16,4 @@ export { default as Card } from "./misc/Card";
 export { default as Spacer } from "./misc/Spacer";
 export { default as Loader } from "./misc/Loader";
 export { default as Slider } from "./misc/Slider";
+export { default as Modal } from "./misc/Modal";

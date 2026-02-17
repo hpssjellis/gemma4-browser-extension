@@ -1,4 +1,11 @@
-import { ProgressInfo } from "@huggingface/transformers";
+// Define ProgressInfo type locally since it may not be exported from the main module
+type ProgressInfo = {
+  status: "initiate" | "download" | "progress" | "done" | "ready";
+  file?: string;
+  loaded?: number;
+  total?: number;
+  [key: string]: any;
+};
 
 export const calculateDownloadProgress = (
   callback: (data: {

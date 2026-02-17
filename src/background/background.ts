@@ -1,3 +1,7 @@
+// sort-imports-ignore
+import "./utils/XMLHttpRequestPolyfill.ts";
+
+// Import XMLHttpRequest polyfill BEFORE any libraries that might need it
 import {
   BackgroundMessages,
   BackgroundTasks,
@@ -17,6 +21,12 @@ import {
 } from "./tools/tabActions.ts";
 import FeatureExtractor from "./utils/FeatureExtractor.ts";
 import VectorHistory from "./vectorHistory/VectorHistory.ts";
+
+console.log(
+  "[Background] After polyfill import, XMLHttpRequest:",
+  typeof XMLHttpRequest,
+  XMLHttpRequest
+);
 
 import Tab = chrome.tabs.Tab;
 

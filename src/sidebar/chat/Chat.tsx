@@ -1,3 +1,4 @@
+import { Hammer } from "lucide-react";
 import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
@@ -10,6 +11,7 @@ import {
 import { Button, InputText } from "../theme";
 import cn from "../utils/classnames.ts";
 import ChatCommands, { ChatCommandsRef, Command } from "./ChatCommands.tsx";
+import ChatToolsModal from "./ChatToolsModal.tsx";
 import MessageContent from "./MessageContent.tsx";
 
 interface FormParams {
@@ -35,6 +37,7 @@ export default function Chat() {
   const [messages, setMessages] = useState<Array<ChatMessage>>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showCommands, setShowCommands] = useState<boolean>(false);
+  const [toolsOpen, setToolsOpen] = useState<boolean>(false);
 
   const inputValue = watch("input");
 
@@ -165,7 +168,15 @@ export default function Chat() {
           onClose={() => setShowCommands(false)}
           onExecute={() => setShowCommands(false)}
         />
+        {toolsOpen && <ChatToolsModal onClose={() => setToolsOpen(false)} />}
         <form onSubmit={handleSubmit(onSubmit)} className="flex gap-3">
+          <Button
+            type="button"
+            color="secondary"
+            variant="solid"
+            iconLeft={<Hammer />}
+            onClick={() => setToolsOpen(true)}
+          />
           <Controller
             name="input"
             control={control}
@@ -188,7 +199,6 @@ export default function Chat() {
               />
             )}
           />
-
           <Button
             type="submit"
             disabled={isLoading || showCommands}

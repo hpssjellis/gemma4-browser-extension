@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@huggingface/transformers": "^3.7.6",
+    "@huggingface/transformers": "^4.0.0-next.3",
     "idb": "^8.0.3",
     "lucide-react": "^0.553.0",
     "react": "^19.2.0",
