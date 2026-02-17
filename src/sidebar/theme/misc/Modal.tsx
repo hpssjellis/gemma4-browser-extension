@@ -35,13 +35,13 @@ export default function Modal({
     >
       <div
         className={cn(
-          "relative w-full max-w-lg rounded-lg border border-gray-700 bg-gray-800 shadow-xl",
+          "relative w-full max-w-lg rounded-lg border border-chrome-border bg-chrome-bg-primary shadow-xl",
           className
         )}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-700 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-chrome-border px-6 py-4">
           <h2 className="text-lg font-semibold text-chrome-text-primary">
             {title}
           </h2>

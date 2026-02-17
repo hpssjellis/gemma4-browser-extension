@@ -2,6 +2,7 @@ import { Hammer } from "lucide-react";
 import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
+import { ToolName } from "../../shared/tools.ts";
 import {
   BackgroundMessages,
   BackgroundTasks,
@@ -39,7 +40,25 @@ export default function Chat() {
   const [showCommands, setShowCommands] = useState<boolean>(false);
   const [toolsOpen, setToolsOpen] = useState<boolean>(false);
 
+  const [activeTools, setActiveTools] = useState<ToolName[]>();
+  const [toolsLoaded, setToolsLoaded] = useState<boolean>(false);
+
   const inputValue = watch("input");
+
+  useEffect(() => {
+    chrome.storage.local.get(["activeTools"], (result) => {
+      if (result.activeTools && Array.isArray(result.activeTools)) {
+        setActiveTools(result.activeTools as ToolName[]);
+      }
+      setToolsLoaded(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (toolsLoaded) {
+      chrome.storage.local.set({ activeTools });
+    }
+  }, [activeTools, toolsLoaded]);
 
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
@@ -168,7 +187,16 @@ export default function Chat() {
           onClose={() => setShowCommands(false)}
           onExecute={() => setShowCommands(false)}
         />
-        {toolsOpen && <ChatToolsModal onClose={() => setToolsOpen(false)} />}
+        {toolsOpen && (
+          <ChatToolsModal
+            activeTools={activeTools}
+            onClose={() => setToolsOpen(false)}
+            onSubmit={(tools: ToolName[]) => {
+              setActiveTools(tools);
+              setToolsOpen(false);
+            }}
+          />
+        )}
         <form onSubmit={handleSubmit(onSubmit)} className="flex gap-3">
           <Button
             type="button"

@@ -1,12 +1,12 @@
 // sort-imports-ignore
 import "./utils/XMLHttpRequestPolyfill.ts";
 
-// Import XMLHttpRequest polyfill BEFORE any libraries that might need it
 import {
   BackgroundMessages,
   BackgroundTasks,
   ResponseStatus,
 } from "../shared/types.ts";
+import { AvailableTools } from "../shared/tools.ts";
 import Agent from "./agent/Agent.ts";
 import {
   createAskWebsiteTool,
@@ -21,12 +21,6 @@ import {
 } from "./tools/tabActions.ts";
 import FeatureExtractor from "./utils/FeatureExtractor.ts";
 import VectorHistory from "./vectorHistory/VectorHistory.ts";
-
-console.log(
-  "[Background] After polyfill import, XMLHttpRequest:",
-  typeof XMLHttpRequest,
-  XMLHttpRequest
-);
 
 import Tab = chrome.tabs.Tab;
 
@@ -43,35 +37,55 @@ const onModelDownloadProgress = (modelId: string, percentage: number) => {
   });
 };
 
-const agent = new Agent();
 const featureExtractor = new FeatureExtractor();
 const vectorHistory = new VectorHistory(featureExtractor);
+let currentAgent: Agent | null = null;
 
-// Register tab management tools
-agent.setTool(getOpenTabsTool);
-agent.setTool(goToTabTool);
-agent.setTool(openUrlTool);
-agent.setTool(closeTabTool);
+const availableTools: Record<string, () => any> = {
+  [AvailableTools.GET_OPEN_TABS]: () => getOpenTabsTool,
+  [AvailableTools.GO_TO_TAB]: () => goToTabTool,
+  [AvailableTools.OPEN_URL]: () => openUrlTool,
+  [AvailableTools.CLOSE_TAB]: () => closeTabTool,
+  [AvailableTools.FIND_HISTORY]: () => vectorHistory.findHistoryTool,
+  [AvailableTools.ASK_WEBSITE]: () => createAskWebsiteTool(featureExtractor),
+  [AvailableTools.HIGHLIGHT_WEBSITE_ELEMENT]: () => highlightWebsiteElementTool,
+  //[AvailableTools.GOOGLE_SEARCH]: () => googleSearchTool,
+};
 
-// Register search tools
-//agent.setTool(googleSearchTool);
+const createAgent = (toolNames?: string[]): Agent => {
+  const agent = new Agent();
 
-// Register vector history tools
-agent.setTool(vectorHistory.findHistoryTool);
+  const toolsToRegister = toolNames || Object.keys(availableTools);
 
-// Register website content tools
-agent.setTool(createAskWebsiteTool(featureExtractor));
-agent.setTool(highlightWebsiteElementTool);
+  for (const toolName of toolsToRegister) {
+    const toolFactory = availableTools[toolName];
+    if (toolFactory) {
+      agent.setTool(toolFactory());
+    } else {
+      console.warn(`[Agent] Unknown tool requested: ${toolName}`);
+    }
+  }
 
-agent.onChatMessageUpdate((messages) =>
-  chrome.runtime.sendMessage({
-    type: BackgroundMessages.MESSAGES_UPDATE,
-    messages,
-  })
-);
+  agent.onChatMessageUpdate((messages) =>
+    chrome.runtime.sendMessage({
+      type: BackgroundMessages.MESSAGES_UPDATE,
+      messages,
+    })
+  );
+
+  return agent;
+};
+
+const getAgent = (): Agent => {
+  if (!currentAgent) {
+    currentAgent = createAgent();
+  }
+  return currentAgent;
+};
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === BackgroundTasks.INITIALIZE_MODELS) {
+    const agent = getAgent();
     Promise.all([
       featureExtractor.getFeatureExtractionPipeline(onModelDownloadProgress),
       agent.getTextGenerationPipeline(onModelDownloadProgress),
@@ -79,7 +93,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       .then(() => {
         sendResponse({ status: ResponseStatus.SUCCESS });
       })
-      .catch((error) => {
+      .catch((error: Error) => {
         console.error("INITIALIZE_MODELS failed:", error);
         sendResponse({ status: ResponseStatus.ERROR, error: error.message });
       });
@@ -87,13 +101,25 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === BackgroundTasks.AGENT_INITIALIZE) {
+    const tools = message.tools as string[] | undefined;
+    currentAgent = createAgent(tools);
+    sendResponse({ status: ResponseStatus.SUCCESS });
+    chrome.runtime.sendMessage({
+      type: BackgroundMessages.MESSAGES_UPDATE,
+      messages: [],
+    });
+    return true;
+  }
+
   if (message.type === BackgroundTasks.AGENT_GENERATE_TEXT) {
+    const agent = getAgent();
     agent
       .runAgent(message.prompt)
       .then(() => {
         sendResponse({ status: ResponseStatus.SUCCESS });
       })
-      .catch((error) => {
+      .catch((error: Error) => {
         console.error("GENERATE_TEXT failed:", error);
         sendResponse({ status: ResponseStatus.ERROR, error: error.message });
       });
@@ -102,6 +128,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === BackgroundTasks.AGENT_GET_MESSAGES) {
+    const agent = getAgent();
     sendResponse({
       status: ResponseStatus.SUCCESS,
       messages: agent.chatMessages,
@@ -110,6 +137,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === BackgroundTasks.AGENT_CLEAR) {
+    const agent = getAgent();
     agent.clear();
     sendResponse({ status: ResponseStatus.SUCCESS });
     return true;
@@ -163,10 +191,7 @@ const addCurrentPageToVectorHistory = async (tabId: number, tab: Tab) => {
 
   // Add to vector history
   try {
-    const entryId = await vectorHistory.addEntry(title, description, tab.url);
-    console.log(
-      `Added page to vector history: "${title}" at ${tab.url} (ID: ${entryId})`
-    );
+    await vectorHistory.addEntry(title, description, tab.url);
   } catch (error) {
     console.error("Failed to add page to vector history:", error);
   }

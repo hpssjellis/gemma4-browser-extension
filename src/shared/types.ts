@@ -7,6 +7,7 @@ export enum ResponseStatus {
 export enum BackgroundTasks {
   EXTRACT_FEATURES,
   INITIALIZE_MODELS,
+  AGENT_INITIALIZE,
   AGENT_GENERATE_TEXT,
   AGENT_GET_MESSAGES,
   AGENT_CLEAR,
