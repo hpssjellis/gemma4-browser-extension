@@ -1,18 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Transformer.js Gemma 4 Extension",
-  "version": "0.0.1",
-  "description": "Chrome extension with transformers.js ML capabilities",
-  "permissions": [
-    "sidePanel",
-    "activeTab",
-    "storage",
-    "scripting",
-    "tabs",
-    "history",
-    "bookmarks"
-  ],
-  "host_permissions": ["<all_urls>"],
+  "name": "Transformer.js Gemma 4 Browser Assistant",
+  "version": "0.0.3",
+  "description": "On-device AI Browser Assistant powered by Transformers.js and Gemma 4 E2B",
+  "permissions": ["sidePanel", "storage", "scripting", "tabs"],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
@@ -25,7 +17,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
