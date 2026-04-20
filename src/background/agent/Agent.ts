@@ -29,6 +29,17 @@ type GenerationMetrics = AgentMetrics;
 export type AgentRunMetrics = AgentMetrics;
 
 let pipe: TextGenerationPipeline | null = null;
+const SYSTEM_PROMPT =
+  "You are a helpful assistant with access to external tools declared in this conversation. " +
+  "Never claim you do not have tools when tool declarations are present. " +
+  "When asked what tools you have, list the declared tool names exactly. " +
+  "If you decide to use a tool, briefly explain what you are doing before calling it.";
+const createInitialMessages = (): Array<Message> => [
+  {
+    role: "system",
+    content: SYSTEM_PROMPT,
+  },
+];
 const END_OF_TEXT_TOKEN_REGEX = /<\|end_of_text\|>/g;
 const sanitizeModelText = (text: string) =>
   text.replace(END_OF_TEXT_TOKEN_REGEX, "").trim();
@@ -40,7 +51,7 @@ const getTextGenerationPipeline = async (
 
   try {
     const m = MODELS[TEXT_GENERATION_ID];
-
+    console.log(m.modelId);
     return await pipeline("text-generation", m.modelId, {
       dtype: m.dtype,
       device: "webgpu",
@@ -58,13 +69,7 @@ const getTextGenerationPipeline = async (
 
 class Agent {
   private pastKeyValues: DynamicCache | null = null;
-  private messages: Array<Message> = [
-    {
-      role: "system",
-      content:
-        "You are a helpful assistant. If you use a tool, explain first what you are doing.",
-    },
-  ];
+  private messages: Array<Message> = createInitialMessages();
   private _chatMessages: Array<ChatMessage> = [];
   private chatMessagesListener: Array<
     (chatMessages: Array<ChatMessage>) => void
@@ -100,13 +105,16 @@ class Agent {
     const start = performance.now();
     let firstTokenAt: number | null = null;
 
+    if (!this.messages.some(({ role }) => role === "system")) {
+      this.messages = [...createInitialMessages(), ...this.messages];
+    }
+
     this.messages = [...this.messages, { role, content: prompt }];
     const pipe = await this.getTextGenerationPipeline();
     const conversation = [...this.messages];
     if (!this.pastKeyValues) {
       this.pastKeyValues = new DynamicCache();
     }
-
     let response = "";
 
     // Add placeholder assistant message for streaming UI updates
@@ -134,7 +142,6 @@ class Agent {
       return_dict: true,
     }) as any;
 
-    // Generate the response
     const output: any = await pipe(conversation, {
       tools: this.tools.map(webMCPToolToChatTemplateTool),
       add_generation_prompt: true,
@@ -335,7 +342,7 @@ class Agent {
   };
 
   public clear() {
-    this.messages = [];
+    this.messages = createInitialMessages();
     void this.pastKeyValues?.dispose();
     this.pastKeyValues = null;
     this.chatMessages = [];
