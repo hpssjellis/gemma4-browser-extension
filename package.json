@@ -2,7 +2,7 @@
   "name": "gemma4-transformers.js-assistant",
   "description": "On-device AI agent Chrome extension powered by Transformers.js and Gemma 4",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "packageManager": "pnpm@10.28.1",
   "scripts": {
@@ -11,7 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@huggingface/transformers": "^4.2.0",
+    "@huggingface/transformers": "file:../transformers.js/packages/transformers/",
     "idb": "^8.0.3",
     "lucide-react": "^0.553.0",
     "react": "^19.2.0",

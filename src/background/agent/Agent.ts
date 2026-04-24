@@ -51,8 +51,7 @@ const getTextGenerationPipeline = async (
 
   try {
     const m = MODELS[TEXT_GENERATION_ID];
-    console.log(m.modelId);
-    return await pipeline("text-generation", m.modelId, {
+    pipe = (await pipeline("text-generation", m.modelId, {
       dtype: m.dtype,
       device: "webgpu",
       progress_callback: (i) => {
@@ -60,7 +59,9 @@ const getTextGenerationPipeline = async (
           onDownloadProgress(m.modelId, i.progress);
         }
       },
-    });
+    })) as TextGenerationPipeline;
+
+    return pipe;
   } catch (error) {
     console.error("Failed to initialize text generation pipeline:", error);
     throw error;
@@ -100,7 +101,8 @@ class Agent {
   public generateText = async (
     prompt: string,
     role: "user" | "tool" = "user",
-    onResponseUpdate: (response: string) => void = () => {}
+    onResponseUpdate: (response: string) => void = () => {},
+    options: { appendPromptMessage?: boolean } = {}
   ): Promise<{ text: string; metrics: GenerationMetrics }> => {
     const start = performance.now();
     let firstTokenAt: number | null = null;
@@ -109,7 +111,9 @@ class Agent {
       this.messages = [...createInitialMessages(), ...this.messages];
     }
 
-    this.messages = [...this.messages, { role, content: prompt }];
+    if (options.appendPromptMessage ?? true) {
+      this.messages = [...this.messages, { role, content: prompt }];
+    }
     const pipe = await this.getTextGenerationPipeline();
     const conversation = [...this.messages];
     if (!this.pastKeyValues) {
@@ -154,12 +158,41 @@ class Agent {
     const promptLength = Number(input.input_ids.dims.at(-1) ?? 0);
     const finalGeneratedText = output?.[0]?.generated_text;
 
-    if (Array.isArray(finalGeneratedText)) {
+    if (Array.isArray(finalGeneratedText) && response.trim().length === 0) {
       const lastMessage = finalGeneratedText[finalGeneratedText.length - 1];
       if (typeof lastMessage === "string") {
         response = lastMessage;
       } else {
-        response = lastMessage?.content ?? response;
+        const content =
+          typeof lastMessage?.content === "string" ? lastMessage.content : "";
+        const toolCalls = Array.isArray(lastMessage?.tool_calls)
+          ? lastMessage.tool_calls
+          : [];
+
+        if (toolCalls.length > 0) {
+          const renderedToolCalls = toolCalls
+            .map((toolCall: any) => {
+              const functionName = toolCall?.function?.name;
+              const functionArguments = toolCall?.function?.arguments ?? {};
+              if (typeof functionName !== "string" || !functionName.trim()) {
+                return "";
+              }
+
+              const serializedArguments =
+                typeof functionArguments === "string"
+                  ? functionArguments
+                  : JSON.stringify(functionArguments);
+
+              return `<|tool_call>call:${functionName}${serializedArguments}<tool_call|>`;
+            })
+            .filter(Boolean)
+            .join("");
+
+          if (renderedToolCalls) response = renderedToolCalls;
+          else if (content.length > 0) response = content;
+        } else if (content.length > 0) {
+          response = content;
+        }
       }
     }
 
@@ -200,7 +233,8 @@ class Agent {
   };
 
   public runAgent = async (prompt: string): Promise<AgentRunMetrics> => {
-    let isUser = true;
+    let roleForGeneration: "user" | "tool" = "user";
+    let appendPromptMessage = true;
     const start = performance.now();
     let generatedTokens = 0;
     let prefillTokens = 0;
@@ -255,12 +289,14 @@ class Agent {
       this.chatMessages = [...prevChatMessages, assistantMessage];
     };
 
-    while (prompt) {
+    while (prompt !== null) {
       const generation = await this.generateText(
         prompt,
-        isUser ? "user" : "tool",
-        updateAssistantMessage
+        roleForGeneration,
+        updateAssistantMessage,
+        { appendPromptMessage }
       );
+
       const finalResponse = generation.text;
       generatedTokens += generation.metrics.generatedTokens;
       prefillTokens += generation.metrics.prefillTokens;
@@ -279,7 +315,6 @@ class Agent {
         msPerToken: generatedTokens > 0 ? decodeMs / generatedTokens : 0,
       };
 
-      isUser = false;
       const { toolCalls, message } = extractToolCalls(finalResponse);
       messageInThisAgentRun = message;
 
@@ -290,6 +325,43 @@ class Agent {
           toolCalls.map(this.executeToolCall)
         );
 
+        for (let i = this.messages.length - 1; i >= 0; i -= 1) {
+          if (this.messages[i].role === "assistant") {
+            this.messages[i] = {
+              ...this.messages[i],
+              content: message,
+            };
+            break;
+          }
+        }
+
+        for (let i = this.messages.length - 1; i >= 0; i -= 1) {
+          if (this.messages[i].role === "assistant") {
+            this.messages[i] = {
+              ...this.messages[i],
+              tool_calls: toolCalls.map((call) => ({
+                id: call.id,
+                type: "function",
+                function: {
+                  name: call.name,
+                  arguments: call.arguments,
+                },
+              })),
+            };
+            break;
+          }
+        }
+
+        this.messages = [
+          ...this.messages,
+          ...toolResponses.map(({ id, name, result }) => ({
+            role: "tool" as const,
+            tool_call_id: id,
+            name,
+            content: result,
+          })),
+        ];
+
         assistantMessage.tools = assistantMessage.tools.map((tool) => ({
           ...tool,
           result:
@@ -298,7 +370,10 @@ class Agent {
         }));
 
         this.chatMessages = [...prevChatMessages, assistantMessage];
-        prompt = toolResponses.map(({ result }) => result).join("\n");
+        prompt =
+          "Use the tool response to answer the user's last request. Do not call tools again unless required.";
+        roleForGeneration = "user";
+        appendPromptMessage = true;
       }
     }
     const totalMs = Math.max(0, performance.now() - start);
@@ -330,13 +405,14 @@ class Agent {
 
   private executeToolCall = async (
     toolCall: ToolCallPayload
-  ): Promise<{ id: string; result: string }> => {
+  ): Promise<{ id: string; name: string; result: string }> => {
     const toolToUse = this.tools.find((t) => t.name === toolCall.name);
     if (!toolToUse)
       throw new Error(`Tool '${toolCall.name}' not found or is disabled.`);
 
     return {
       id: toolCall.id,
+      name: toolCall.name,
       result: await executeWebMCPTool(toolToUse, toolCall.arguments),
     };
   };

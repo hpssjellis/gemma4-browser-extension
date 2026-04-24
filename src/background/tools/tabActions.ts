@@ -28,7 +28,12 @@ export const getOpenTabsTool: WebMCPTool = {
               },
             });
             description = results[0]?.result || null;
-          } catch {
+          } catch (error) {
+            console.warn("[tool:get_open_tabs] description fetch failed", {
+              tabId: tab.id,
+              url: tab.url,
+              error,
+            });
             description = null;
           }
         }
@@ -47,6 +52,7 @@ export const getOpenTabsTool: WebMCPTool = {
       const tabInfo = await Promise.all(tabInfoPromises);
       return JSON.stringify(tabInfo, null, 2);
     } catch (error) {
+      console.error("[tool:get_open_tabs] failed", error);
       return `Error getting tabs: ${error.toString()}`;
     }
   },
