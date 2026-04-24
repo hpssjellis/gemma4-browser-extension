@@ -1,4 +1,6 @@
 # Transformers.js Gemma 4 Browser Assistant
+.
+
 
 ## About this extension
 
